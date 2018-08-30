@@ -1,6 +1,6 @@
 ---
 title: "EssaiGit"
-author: "Youssouf Souare"
+author: "Youssouf Souare "
 date: "30 aug 2018"
 output: html_document
 ---
@@ -17,6 +17,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r cars}
 summary(cars)
+str(cars)
 ```
 
 ## Including Plots
