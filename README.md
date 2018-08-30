@@ -1,2 +1,2 @@
 # FEInterviewProject
-This project contains the files for job interview at FE  Sept. 4, 2018
+This is a simple demo for the interview at FE.
