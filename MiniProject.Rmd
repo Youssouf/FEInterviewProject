@@ -1,0 +1,63 @@
+---
+title: | 
+  | Demo Job intterviw at FE.
+  | Data Scientist
+author: "Youssouf Souare"
+date:  "August 28, 2017"
+output:
+  html_document: 
+    number_sections: true
+  pdf_document: 
+    number_sections: true
+    dev: png
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, dpi = 300)
+```
+
+```{r  echo= FALSE, message=FALSE}
+##########################
+library(tidyverse)
+library(lubridate)
+library(pander) # for prettier tables
+library(scales) # for making prettier axes in plots
+library(plotly) 
+library(devtools)
+#library(maps)
+library(corrgram) # to investigate the correlation between variables
+library(corrplot) # to plot correlation data
+library(knitr)
+library(kableExtra)
+library(caTools)
+library(modelr)
+library(GGally)
+#library(viridis)
+library(factoextra)
+library(nycflights13)
+##########################
+
+theme_set(theme_bw())
+
+panderOptions('big.mark', ',')
+```
+
+
+
+# Exercises
+
+For this project, we focus on the following datasets: `airlines`, `airports`, `flights`, `planes`, and `weather`.We are going to invstigate these datasets to answeer the following questions:
+
+## Exercise
+
+Construct a barplot displaying number of flights per month.
+
+```{r, echo = FALSE}
+#library(nycflights13)
+
+airlines
+airports
+flights
+planes
+weather
+````
