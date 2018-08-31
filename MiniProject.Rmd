@@ -27,7 +27,7 @@ library(pander) # for prettier tables
 library(scales) # for making prettier axes in plots
 library(plotly)  # utils for interaction ploting 
 library(devtools)
-#library(maps)
+library(maps)
 library(corrgram) # to investigate the correlation between variables
 library(corrplot) # to plot correlation data
 library(knitr) # utils for html table styling
@@ -35,7 +35,7 @@ library(kableExtra) # utils for html table styling
 library(caTools)
 library(modelr)
 library(GGally)
-#library(viridis)
+library(viridis)
 library(factoextra)
 library(nycflights13)
 library(magrittr) # utils for pipe %>%
@@ -48,7 +48,7 @@ panderOptions('big.mark', ',')
 ```
 
 
-# Exercises
+# ExercisesS
 
 For this project, we focus on the following datasets: `airlines`, `airports`, `flights`, `planes`, and `weather`.We are going to invstigate these datasets to answeer the following questions:
 
