@@ -35,6 +35,8 @@ library(GGally)
 #library(viridis)
 library(factoextra)
 library(nycflights13)
+library(magrittr)
+
 ##########################
 
 theme_set(theme_bw())
@@ -43,21 +45,304 @@ panderOptions('big.mark', ',')
 ```
 
 
-
 # Exercises
 
 For this project, we focus on the following datasets: `airlines`, `airports`, `flights`, `planes`, and `weather`.We are going to invstigate these datasets to answeer the following questions:
 
-## Exercise
+* Exercises
+    + Construct a barplot displaying number of flights per month.
+    + Now, in the barplot (showing number of flights per month), make a separate bar for each origin.
+    + List of the number of flights for each origin per month
+    + What are the top-10 destinations and how many flights were made to these?
+    + How many weather observations are there for each origin?
+    + Convert temperature to degrees Celsius. This will be used in the reminder of this miniproject.
+(We do this for both `temp` and `dewp` using `mutate_at`)
+    + Construct a graph displaying the temperature at `JFK`.
+    + Investigate if arrival delay is associated with the flight distance (and also departure delay).
+    + Is the age of the plane associated to delay?
+    + ----
+    
+# Solutions 
 
-Construct a barplot displaying number of flights per month.
+We start by an exploratory Data to  understand the different datasets so that one can get an idea about how to answer the different questions.
 
 ```{r, echo = FALSE}
 #library(nycflights13)
 
 airlines
+str(airlines)
 airports
 flights
 planes
 weather
-````
+```
+ 
+  + Construct a barplot displaying number of flights per month.
+  
+```{r exo_1}
+
+# Here, we convert these variables to the categorical ones.
+
+flights$month <- as.factor(flights$month)
+flights$origin <- as.factor(flights$origin)
+flights$dest <- as.factor(flights$dest)
+
+planes$manufacturer <-as.factor(planes$manufacturer)
+
+# Vector Name of months
+
+v_months <- c("1" = "Jan", "2" = "Feb","3" = "Mar", 
+              "4" = "Apr", "5" = "May", "6" = "Jun",
+              "7" = "Jul", "8" = "Aug","9" = "sep",                 
+              "10" = "Oct","11" = "Nov", "12" = "Dec")
+
+```
+Now we can construct a barplot displaying number of flights per month.
+```{r echo=TRUE, warning= F}
+
+nfly_per_month <- flights%>%
+  group_by(year, month)%>%
+  ggplot(aes(x = month))+
+  geom_bar() +
+  labs(x = "Months", 
+       y = "Number of flights",
+       title = "Number of flights per month")+
+
+  scale_x_discrete(labels = v_months) 
+
+ # nfly_per_month
+
+ ggplotly(nfly_per_month)  # to makee it interactive.
+ 
+```
+Now, in the barplot (showing number of flights per month), make a separate bar for each origin.
+
+```{r echo =TRUE}
+origin_flights <- flights%>%
+  ggplot(aes( x = month))+
+  geom_bar(aes(fill = origin), position = "dodge") +
+  labs(x = "Months",
+       y = "Number of flights", 
+       title = "flights for each origin per month") +
+  scale_x_discrete(labels = v_months)
+
+ ggplotly(origin_flights) # make it interactive
+ 
+#  origin_flights
+
+```
+List of the number of flights for each origin per month
+```{r echo=TRUE, warning=FALSE}
+months_list <- flights%>%
+  group_by(month, origin)%>%
+  summarise(n_of_flights = n())
+
+
+ # months_list%>%
+  #  pander(big.mark = '.', justify = c('left','center', 'right'))
+```
+
+```{r echo= TRUE}
+kable(months_list, "html") %>%
+  kable_styling("striped","hover") %>%
+  scroll_box(width = "500px", height = "600px")
+```
+  + What are the top-10 destinations and how many flights were made to these?
+  
+```{r echo= TRUE}
+# The top-10 destinations and number of flights to these.
+
+top10 <-flights%>%na.omit()%>%
+  group_by(dest)%>%
+  summarise(n_flight= n())%>%
+  arrange(desc(n_flight))%>%
+  select( dest, n_flight)%>%
+  head(10)
+
+# List of top-10 destinations and number of flights to these.
+
+top10%>%
+  pander(big.mark = '.', decimal.mark = ',', justify = c('left', 'right'))
+
+```
+Now, order the bars (destinations) according to the total number of flights to these destinations.
+
+
+```{r echo=TRUE}
+
+nfly_to_top10 <- top10 %>% 
+ggplot( aes(x= reorder(dest,-n_flight),n_flight))+
+  geom_bar(stat = "identity")+
+  labs(x = "Top-10 destinations",
+       y = "Number of flights",
+       title = "Number of flights")
+# nfly_to_top10
+
+ggplotly(nfly_to_top10) # To make it interactive
+
+```
+  + How many weather observations are there for each origin?
+
+```{r  echo= TRUE}
+# Compute the number of observations for each origin.
+weather%>%
+  group_by(origin)%>% na.omit()%>%
+  summarise(n_observ = n())%>% # Number of observations
+  arrange(desc(n_observ))%>%
+  pander(big.mark = ',', justify = c('left', 'right'))
+
+```
+Convert temperature to degrees Celsius. This will be used in the reminder of this miniproject.
+(We do this for both `temp` and `dewp` using `mutate_at`)
+
+
+```{r echo = TRUE}
+# Convert degree fahrenheit to degree celcius.
+fahrenheit_to_celcius <- function(df)
+{
+  t_celcius <- (df - 32)* 5/9 
+    
+    return(t_celcius)
+}
+
+# Convert temp and dewp to degree selcius.
+weather_dc <-  mutate_at(weather,    vars(temp,dewp),funs(fahrenheit_to_celcius))
+
+head(weather_dc)
+
+
+# convert variables  origin and month to fator. 
+
+weather_dc$origin <- as.factor(weather_dc$origin)
+weather_dc$month <- as.factor(weather_dc$month)
+
+```
+Construct a graph displaying the temperature at `JFK`.
+
+```{r echo=TRUE}
+ jfk_temp <- weather_dc%>%
+
+  group_by(year, month, day)%>%
+  filter(origin =="JFK")%>%
+  ggplot(aes(month, temp))+
+  geom_boxplot() +
+  labs(x = "Months",
+       y = "Temperature in degree C",
+       title = "Graph temperature at JFK") +
+  scale_x_discrete(labels = v_months)+
+  
+# added after submission
+  #  geom_boxplot(alpha=0.4) +
+    stat_summary(fun.y=mean, geom="point", shape=4,
+                 size=2, color="red", fill="red") +
+    theme(legend.position="none") 
+# end added
+
+ #jfk_temp
+  ggplotly(jfk_temp)
+
+```
+
+Now, visualize the daily mean temperature for each origin airport.
+
+```{r echo=TRUE}
+mean_temp_orign <- weather_dc%>%
+  group_by(origin,year,month, day)%>%
+  summarise(mean_temp = mean(temp, na.rm = TRUE))%>%
+  ggplot(aes(origin,mean_temp))+
+  geom_boxplot(aes(fill = origin))+
+  
+  # added after submission
+  
+  #  geom_boxplot(alpha=0.4) +
+    stat_summary(fun.y=mean, geom="point", shape=4, size=2, color="red", fill="red") +
+  #  theme(legend.position="none") +
+# end added
+  
+  
+  
+  #geom_point()+
+  
+  labs(x = "Origins ",
+       y = "Mean temperature",
+       title = "Mean temperature ")
+  
+ #mean_temp_orign
+
+ggplotly(mean_temp_orign)
+
+```
+
+Investigate if arrival delay is associated with the flight distance (and also departure delay).
+
+In order to investigate if there is any statistical dependence or association between some variables, one can calculate the correlation between these variables. To do so, we will first investigate if these variables are numeric and  if there is no missing values.
+
+```{r echo = TRUE}
+ select_cols <- flights%>%
+  select(arr_delay, dep_delay, distance)  # Select relevant columns from flights
+
+#Take complete cases. 
+
+ flights_complet_cases <- select_cols[complete.cases(select_cols),]
+
+```
+
+Calculate the correlation between variables
+```{r echo = TRUE}
+# Correlation test between different variables or columns.
+
+cor_test1 <- cor(flights_complet_cases)
+
+cor_test_tb <- as.data.frame(cor_test1)
+
+ cor_test_tb
+ 
+```
+Format the correlation data
+```{r echo= TRUE}
+   kable(cor_test_tb, "html") %>% # format correlation table.
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered", "responsive"))
+```
+We can also plot the correlation data to visualize the relation between variables.
+
+```{r echo = TRUE}
+corrplot(cor_test1, method="color", type = "upper",
+         tl.srt = 45,addCoef.col = "black")
+
+```
+
+ As we can see from the different graphs and correlation parameters , there is 
+ a strong correlation between arrival delay and departure delay. In the contrast, there is a negative correlation between the distance and arrival delay. In the next step, I will build a linear regression model using these three variables.
+ 
+ 
+ Linear model arrival delay and departure delay
+
+```{r echo = TRUE}
+# Model arrival delay and departure delay
+
+ del_model1 <- lm(arr_delay ~ dep_delay, data = flights_complet_cases)
+coef(del_model1)
+summary(del_model1)
+```
+from this result, one can conclude that departure delay is an important predictor of arrival delay. The changes of departure delay can explain the changes in arrival delay.
+```{r echo=TRUE}
+pred_delay <- flights_complet_cases%>%
+  add_predictions(del_model1)%>%
+  add_residuals(del_model1)
+head(pred_delay, 10)
+  
+  # After submission of report
+  pred_plot <- pred_delay%>%
+    ggplot(aes(dep_delay, pred))+
+    geom_line()+
+    geom_point(aes(dep_delay, arr_delay),
+               col = "red")  
+
+pred_plot
+
+```
+
+
+
+
+  
