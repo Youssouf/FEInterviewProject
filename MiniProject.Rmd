@@ -21,11 +21,11 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, dpi = 300)
 
 ```{r  echo= FALSE}
 ##########################
-library(tidyverse)
-library(lubridate)
+library(tidyverse) 
+library(lubridate) # utils for data manupulation
 library(pander) # for prettier tables
 library(scales) # for making prettier axes in plots
-library(plotly) 
+library(plotly)  # utils for interaction ploting 
 library(devtools)
 #library(maps)
 library(corrgram) # to investigate the correlation between variables
@@ -38,7 +38,7 @@ library(GGally)
 #library(viridis)
 library(factoextra)
 library(nycflights13)
-library(magrittr)
+library(magrittr) # utils for pipe %>%
 
 ##########################
 
@@ -76,14 +76,18 @@ We start by an exploratory Data to  understand the different datasets so that on
 airlines
 str(airlines)
 airports
+str(airports)
 flights
+str(flights)
 planes
+str(planes)
 weather
+str(weather)
 ```
  
   + Construct a barplot displaying number of flights per month.
   
-```{r exo_1}
+```{r exo_1, echo= TRUE}
 
 # Here, we convert these variables to the categorical ones.
 
@@ -102,7 +106,7 @@ v_months <- c("1" = "Jan", "2" = "Feb","3" = "Mar",
 
 ```
 Now we can construct a barplot displaying number of flights per month.
-```{r echo=TRUE, warning= F}
+```{r echo=TRUE}
 
 nfly_per_month <- flights%>%
   group_by(year, month)%>%
@@ -112,19 +116,19 @@ nfly_per_month <- flights%>%
        y = "Number of flights",
        title = "Number of flights per month")+
 
-  scale_x_discrete(labels = v_months) 
+  scale_x_discrete(labels = v_months)  # Names of months as labels
 
  # nfly_per_month
 
  ggplotly(nfly_per_month)  # to makee it interactive.
  
 ```
-Now, in the barplot (showing number of flights per month), make a separate bar for each origin.
+  + Now, in the barplot (showing number of flights per month), we can make a separate bar for each origin.
 
 ```{r echo =TRUE}
 origin_flights <- flights%>%
   ggplot(aes( x = month))+
-  geom_bar(aes(fill = origin), position = "dodge") +
+  geom_bar(aes(fill = origin), position = "dodge") + 
   labs(x = "Months",
        y = "Number of flights", 
        title = "flights for each origin per month") +
@@ -135,7 +139,7 @@ origin_flights <- flights%>%
 #  origin_flights
 
 ```
-List of the number of flights for each origin per month
+  + List of the number of flights for each origin per month
 ```{r echo=TRUE, warning=FALSE}
 months_list <- flights%>%
   group_by(month, origin)%>%
@@ -169,7 +173,7 @@ top10%>%
   pander(big.mark = '.', decimal.mark = ',', justify = c('left', 'right'))
 
 ```
-Now, order the bars (destinations) according to the total number of flights to these destinations.
+Now, we can order the bars (destinations) according to the total number of flights to these destinations.
 
 
 ```{r echo=TRUE}
@@ -196,7 +200,7 @@ weather%>%
   pander(big.mark = ',', justify = c('left', 'right'))
 
 ```
-Convert temperature to degrees Celsius. This will be used in the reminder of this miniproject.
+  + Convert temperature to degrees Celsius. This will be used in the reminder of this miniproject.
 (We do this for both `temp` and `dewp` using `mutate_at`)
 
 
@@ -221,7 +225,7 @@ weather_dc$origin <- as.factor(weather_dc$origin)
 weather_dc$month <- as.factor(weather_dc$month)
 
 ```
-Construct a graph displaying the temperature at `JFK`.
+  + Construct a graph displaying the temperature at `JFK`.
 
 ```{r echo=TRUE}
  jfk_temp <- weather_dc%>%
