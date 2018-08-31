@@ -30,8 +30,8 @@ library(devtools)
 #library(maps)
 library(corrgram) # to investigate the correlation between variables
 library(corrplot) # to plot correlation data
-library(knitr)
-library(kableExtra)
+library(knitr) # utils for html table styling
+library(kableExtra) # utils for html table styling
 library(caTools)
 library(modelr)
 library(GGally)
@@ -60,9 +60,13 @@ For this project, we focus on the following datasets: `airlines`, `airports`, `f
     + How many weather observations are there for each origin?
     + Convert temperature to degrees Celsius. This will be used in the reminder of this miniproject.
 (We do this for both `temp` and `dewp` using `mutate_at`)
+
     + Construct a graph displaying the temperature at `JFK`.
+    
     + Investigate if arrival delay is associated with the flight distance (and also departure delay).
+    
     + Investigate if departure delay is associated with weather conditions at the origin airport. This includes descriptives (mean departure delay), plotting, regression modelling, considering missing values etc.
+    
     + Is the age of the plane associated to delay?
     
     
@@ -281,7 +285,7 @@ ggplotly(mean_temp_orign)
 
 ```
 
-Investigate if arrival delay is associated with the flight distance (and also departure delay).
+  + Investigate if arrival delay is associated with the flight distance (and also departure delay).
 
 In order to investigate if there is any statistical dependence or association between some variables, one can calculate the correlation between these variables. To do so, we will first investigate if these variables are numeric and  if there is no missing values.
 
@@ -289,13 +293,13 @@ In order to investigate if there is any statistical dependence or association be
  select_cols <- flights%>%
   select(arr_delay, dep_delay, distance)  # Select relevant columns from flights
 
-#Take complete cases. 
+#Select the rows with  complete cases. 
 
  flights_complet_cases <- select_cols[complete.cases(select_cols),]
 
 ```
 
-Calculate the correlation between variables
+Calculate the correlation between  variables
 ```{r echo = TRUE}
 # Correlation test between different variables or columns.
 
@@ -323,7 +327,7 @@ corrplot(cor_test1, method="color", type = "upper",
  a strong correlation between arrival delay and departure delay. In the contrast, there is a negative correlation between the distance and arrival delay. In the next step, I will build a linear regression model using these three variables.
  
  
- Linear model arrival delay and departure delay
+Now, we are going to build the  Linear model arrival delay and departure delay
 
 ```{r echo = TRUE}
 # Model arrival delay and departure delay
@@ -335,7 +339,9 @@ summary(del_model1)
 from this result, one can conclude that departure delay is an important predictor of arrival delay. The changes of departure delay can explain the changes in arrival delay.
 ```{r echo=TRUE}
 pred_delay <- flights_complet_cases%>%
+  
   add_predictions(del_model1)%>%
+  
   add_residuals(del_model1)
 head(pred_delay, 10)
   
@@ -350,6 +356,526 @@ pred_plot
 
 ```
 
+```{r}
+# One can also investigate a possibility of quadratisc and polynomial relationship between arrival delay and departure delay and compare the results
+my_flights  <- flights%>%na.omit()
+
+  p1_delay =  lm(arr_delay ~dep_delay, data = my_flights)
+  
+  p2_delay =  lm(arr_delay ~dep_delay
+                 + I(dep_delay^2), data = flights)
+  
+  p3_delay =  lm(arr_delay ~ poly(dep_delay, 5),
+                 data = my_flights)
+  
+ 
+ p <- qplot(dep_delay, arr_delay, data=my_flights)
+  p + geom_line(aes(dep_delay, predict(p1_delay)), col='blue') +
+    geom_line(aes(dep_delay, predict(p2_delay)), col='red') +
+    geom_line(aes(dep_delay, predict(p3_delay)), col='green') 
+  
+ 
+```
+
+  + Investigate if departure delay is associated with weather conditions at the origin airport. This includes descriptives (mean departure delay), plotting, regression modelling, considering missing values etc.
+
+```{r  echo = TRUE}
+# We selct the relevant columns from  both flights and weather datasets
+# then join  the two subsets.
+
+flight_delay <- flights%>%
+  select(year:day, origin, hour, arr_delay, dep_delay, tailnum)
+#flight_delay
+```
+Join subset flights and planes datasets
+```{r echo= TRUE}
+fly_w_cd <-  inner_join(flight_delay, weather_dc,
+                        by = c("origin" = "origin",
+                                 "year" = "year",
+                                "month" = "month",
+                                  "day" = "day",
+                                 "hour" = "hour"))
+
+#c("year", "day","month", "hour", "origin")
+
+# Here  I consider only the completecases from dataset.
+
+ fly_weather_cd <- fly_w_cd[complete.cases(fly_w_cd),]
+ 
+head(fly_weather_cd)
+
+```
+Now we can compute the correlation between numeric relevant variables.
+
+```{r echo = TRUE}
+num_cols <- sapply(fly_weather_cd, is.numeric)
+
+fly_weather_cd  <- fly_weather_cd[, num_cols] # numeric columns
+
+delay_weather_cd <- fly_weather_cd%>%
+  select(dep_delay, humid,precip, visib,
+         wind_dir, wind_speed, temp, dewp)
+
+cor_delay_wc <- cor(delay_weather_cd)
+
+cor_delay_wc
+```
+ We can Plot  the correlation data to see the relations between variables
+ 
+```{r echo = TRUE}
+corrplot(cor_delay_wc, method="color", type = "upper",
+         tl.srt = 45,addCoef.col = "black")
+
+#corrplot(cor_delay_wc, method = 'number')
+```
+ 
+According to correlation plots, there is no strong correlation between departure delay and any of the weather conditions variables and there is a tight competition between positive and negative correlations. To get more information we will visualize the relationship between delay and some of the variable such as `temp` and ``precip`. 
+ 
+```{r echo = TRUE}
+fly_w_cd%>%
+  group_by(precip)%>%
+  summarise (dp_delay = mean(dep_delay, na.rm = TRUE))%>%
+  ggplot(aes(precip, dp_delay))+
+  geom_line()+
+ 
+  geom_point()
+
+```
+ As we can see from the graph, the precip doesn't provide more information explanation about departure delay and the correlation between these two variables is weak.
+```{r echo = TRUE}
+fly_w_cd%>%
+  group_by(temp)%>%na.omit()%>%
+  summarise (dp_delay = mean(dep_delay, na.rm = TRUE))%>%
+  ggplot(aes(temp, dp_delay))+
+ # geom_line(col = "red")+
+ 
+  geom_point()+
+ geom_smooth(  se = FALSE, method = 'loess')
+
+```
+Surprisingly, can that the departure delay increase with temperature but this variation is not significant to provide more explanation about departure delay changes. In the next step I will build the linear regression model.
+
+Modelling weather conditions delay model
+
+```{r echo = TRUE}
+set.seed(101)
+#delay_weather_cd%>%
+wc_delay_sample <- sample.split(delay_weather_cd$dep_delay, 
+                                SplitRatio = 0.7)
+
+# train set
+train <- subset(delay_weather_cd, wc_delay_sample == TRUE)
+head(train)
+#Test set
+test <- subset(delay_weather_cd, wc_delay_sample == FALSE)
+head(test)
+```
+ Build linear model 
+```{r echo = TRUE}
+model <- lm(dep_delay~ ., data = train)
+summary(model)
+
+# Residuals
+
+residus <- residuals(model)
+residus <- as.data.frame(residus)
+#head(residus)
+
+```
+
+```{r}
+ggplot(residus, aes(residus))+
+geom_freqpoly(binwidth = 0.5)
+
+```
+
+
+```{r echo = TRUE}
+residus%>%
+ggplot(aes(residus)) +  geom_histogram(fill='blue',alpha=0.5, bins = 20)
+```
+
+
+```{r echo = TRUE}
+# After submission of report
+
+delay_weather_cd%>%
+ggplot(aes(dep_delay)) +  geom_histogram(fill='blue',alpha=0.5, bins = 20)
+```
+
+
+Plotting model
+```{r}
+#plot(model)
+```
+Prediction computation
+
+
+```{r echo = TRUE}
+delay_predict <- predict(model, test)
+predict_res  <- cbind(delay_predict, test$dep_delay)
+
+colnames(predict_res) <- c("predict", "actual")
+
+predict_res<- as.data.frame(predict_res)
+
+ head(predict_res)
+ 
+ head(delay_predict)
+ 
+```
+
+ + Is the age of the plane associated to delay?
+
+Here, we start by computing the age of each and store it in new column names ` age`.
+```{r echo = TRUE}
+
+# This function compute the age the plane as integer.
+cur_year <- as.integer(format(Sys.Date(), "%Y"))
+
+year_diff <- function(x_year, y_year = cur_year)
+{
+   x_year <- as.integer(x_year)
+  
+    
+ return(y_year - x_year)
+ 
+}
+```
+
+
+
+```{r echo = TRUE}
+pl_ages <- planes%>%
+ mutate(age = year_diff(year))%>%
+  select(tailnum, age, seats)
+pl_ages <- pl_ages[complete.cases(pl_ages),]
+
+
+flight_delay <- flights%>%
+  select(year:day, origin, hour, arr_delay, dep_delay, tailnum)
+
+#  join planes and flights datasets
+
+join_fly_planes <- flight_delay%>%
+  inner_join(pl_ages, by = "tailnum")
+  #join_fly_planes
+  
+ fly_planes <-join_fly_planes%>%
+   select(age,dep_delay,arr_delay)
+ fly_planes <-fly_planes[complete.cases(fly_planes),]
+ fly_planes
+
+```
+ 
+ Now I will perform  some plotting to  visualize the graphic (age vs delay)
+
+```{r echo = TRUE}
+age_delay <- fly_planes%>%
+  group_by(age)%>%
+  filter(!is.na(dep_delay)) %>%
+  summarise(delay = mean(dep_delay)) %>%
+  ggplot(aes(x = age, y = delay)) +
+ # geom_point() +
+  geom_line() +
+  labs(x = "Age of planes",
+       y = "Mean of departure delay",
+       title = "Graph dep_delay vs age")
+ age_delay
+#ggplotly(age_delay)
+
+```
+try correlation between  age of planes and arrival delay.
+```{r echo = TRUE}
+
+cor_delay_age  <-cor(fly_planes)
+
+cor_delay_age
+
+```
+According to the correlation table, There is a weak negative correlation between age and both arrival delay and departure delay. Meaning, the age of the planes can not explained the changes of delay.  
+
+Format the correlation data
+
+```{r}
+   kable( cor_delay_age, "html") %>% # format correlation table.
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+  + It seems like the plane manufacturer could use a cleaning. After that, how many manufacturers have more than 200 planes? And how many flights are each manufacturer with more than 200 planes responsible for?
+
+```{r echo = TRUE}
+# Find list of manufacturers that have more than 200 planes.
+manufact_200_planes <- planes%>%
+  filter(!is.na(manufacturer)) %>%
+group_by( manufacturer)%>%
+  summarise(n_planes =n())%>%
+  arrange(desc(n_planes))%>%
+  filter(n_planes > 200)
+#print list 
+  manufact_200_planes%>%
+    pander(big.mark = ',', justify = c('left', 'right'))
+  
+ # Combine the subset manufact_200_planes with flights dataset to find number of flights.
+  
+num_planes200 <- planes%>%
+  inner_join(flights,"tailnum")%>% 
+  filter(manufacturer %in%
+           manufact_200_planes$manufacturer)%>% 
+  
+  group_by( manufacturer)%>%
+  summarise(n_flight =n())%>%
+  arrange(desc(n_flight))
+
+  # print list
+  num_planes200%>%
+     pander(big.mark = ',', justify = c('left', 'right'))
+
+ # format number of flights
+  
+ kable(num_planes200, "html") %>% # format correlation table.
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", "bordered"))
+
+```
+
+It turns out that Airbus has several main models, e.g. several A320 (A320-211, A320-212 etc.) and so on. Create a frequency table of the main models for Airbus and how many planes there are in each.
+
+```{r echo = TRUE}
+# Find number of model for "AIRBUS"
+
+airbus_models <- planes%>% 
+  group_by(model)%>%
+  filter(manufacturer =="AIRBUS")%>%
+  summarise(n_of_planes = n())%>%
+  arrange(desc(n_of_planes))
+
+# Split column model to find main models
+#airbus_models%>%
+  
+  split_m <- strsplit( airbus_models$model, "-")
+
+main_mdl <- vector("character", length = length(split_m))
+
+for (m in 1: length(split_m)) {
+  
+  main_mdl[m] <- split_m[[m]][1]
+  
+}
+# List of main models
+
+m_models <- airbus_models%>%
+  mutate(main_model =  main_mdl)
+
+ m_models %>%
+  pander(big.mark = ',', justify = c('left','center', 'right'))
+
+ # format list
+  
+ kable(m_models, "html") %>% # format correlation table.
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", "bordered"))
+  
+
+```
+
+
+```{r echo = TRUE }
+# A Frequency table of main models
+
+m_models%>%
+  group_by(main_model)%>%
+  summarise( num_model = n(), num_of_planes = sum(n_of_planes))%>%
+pander(big.mark = ',', justify = c('left','center', 'right'))
+```
+
+
+## Exercise
+
+Are larger planes (measured by number of seats) more or less delayed than smaller planes?
+To answer this question one can visualize the plot (` seats vs arr_delay`)
+
+```{r echo = TRUE}
+delay_seats <- join_fly_planes%>%
+  group_by(seats)%>%
+  summarise(mean_delay = mean(arr_delay, na.rm = TRUE))%>%
+  arrange(desc(seats))
+
+delay_seats%>%
+pander(big.mark = ',', justify = c('left', 'right'))
+
+kable(delay_seats, "html") %>%
+  kable_styling() %>%
+  scroll_box(width = "500px", height = "600px")
+
+```
+
+```{r}
+
+delay_seat<- delay_seats%>%
+  ggplot(aes(factor(seats), mean_delay))+
+  geom_point() +
+  labs(x = "Number of seats",
+       y = "Mean of departure delay",
+       title = "Graph dep_delay vs age")
+ 
+delay_seat
+#ggplotly(delay_seat)
+```
+
+According to this graph, there is no sign that the larger planes are more delayed than the smaller ones.
+
+One can also try to compute the correlation between ` age, arr_delay` and ` dep_delay`.
+
+```{r}
+seat_delay <- join_fly_planes%>%
+  select(seats, arr_delay, dep_delay)%>% na.omit()
+
+ seat_cor <- cor(seat_delay) # correlation
+ 
+corrplot(seat_cor, method="color", type = "upper",
+         tl.srt = 45,addCoef.col = "black")
+   
+   kable(seat_cor, "html") %>% # format correlation table.
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", "bordered"))
+   
+```
+ There is a weak negative correlation between a number of seats and delay meaning that the number of seats (smaller/ larger) can not explain the arrival delay.
+ 
+```{r}
+ set_delay_model <- lm(seat_delay$arr_delay ~seat_delay$seats)
+summary(set_delay_model)
+coef(set_delay_model)
+```
+
+## Exercise
+
+On a map (`map_data("usa")`), plot the airports that has flights to them.
+
+```{r echo=TRUE}
+usa <- map_data("usa")
+
+
+#airports$faa <- as.factor(airports$faa)
+
+fli_dest <- flights%>%
+  group_by(dest)%>%
+  summarise(n = n())%>%
+  inner_join(airports, by =c(dest = "faa"))
+fli_dest 
+
+
+```
+
+```{r}
+
+ggplot() + 
+  geom_polygon(data = usa, aes(long, lat, group = group), fill = "grey") + 
+  geom_point(data = fli_dest , aes(lon, lat), color="blue") + 
+  labs(x = "longitude",
+       y = "latitude",
+       title = "map flights for destinations")+ 
+  borders('state')+
+  coord_quickmap()
+
+```
+
+Make a similar plot, but now points must have size relative to the number of flights each airport is destination for. 
+
+
+```{r echo = TRUE}
+
+map_data <- ggplot() + 
+  geom_polygon(data = usa, aes(long, lat, group = group), fill = "grey") +
+
+geom_point(data =fli_dest, aes(x = lon, y = lat, size = n , color = n)) + 
+  borders("state")+
+  scale_color_viridis()+
+  
+  labs(x = "longitude",
+       y = "latitude",
+       title = "map flights for destinations")+
+coord_quickmap()
+map_data
+#ggplotly(map_data)
+
+```
+
+## Exercise
+
+Do a principal component analysis of the weather at JFK using the following columns: `temp, dewp, humid, wind_dir, wind_speed, precip, visib` (only on `complete.cases()`). How many principal components should be used to capture the variability in the weather data? 
+
+```{r echo=TRUE}
+weather_dc <-  mutate_at(weather, vars(temp, dewp),funs(fahrenheit_to_celcius))
+
+weather_jfk_df <- weather_dc%>%
+  group_by(origin)%>%
+filter(origin == "JFK") %>%
+   select(origin,temp, dewp, humid, wind_dir, wind_speed, precip, visib)
+
+head(weather_jfk_df)
+
+```
+
+```{r echo = TRUE}
+# Here we consider the completecases
+
+weather_jfk<- weather_jfk_df[complete.cases(weather_jfk_df),]
+ 
+weather_jfk <-  weather_jfk[, sapply(weather_jfk, is.numeric)]
+
+```
+
+summary and correlation plot
+
+```{r}
+cor_data <- cor(weather_jfk)
+corrplot(cor_data, method="color", type = "upper",
+         tl.srt = 45,addCoef.col = "black")
+```
+
+Principal component analysis PCA
+
+```{r}
+pairs(weather_jfk)
+ggpairs(weather_jfk)
+
+head(weather_jfk)
+summary(weather_jfk)
+
+```
+
+
+```{r}
+weather_jfk_pca <- prcomp(weather_jfk, scale. =  TRUE)
+
+fviz_eig(weather_jfk_pca)
+
+#plot(weather_jfk_pca)
+plot(weather_jfk_pca, type = 'l')
+summary(weather_jfk_pca)
+weather_jfk_pca
+
+```
+ 
+```{r cache= TRUE}
+
+ggpairs(weather_jfk_pca$x %>% as_tibble())
+```
+
+
+Accordingly, to the different plots and summary table, one can see that more than 94% of weather variability can be captured by 5 PCs. So we choose the 5 first components as principal ones. 
+
+```{r, fig.width = 12, fig.asp=1}
+par(mfrow = c(3,3), mar = c(1,1,1,1)*2)
+
+biplot(weather_jfk_pca, scale = 0, choices = c(1,2))
+#biplot(weather_jfk_pca, scale = 0, choices = c(1,3))
+#biplot(weather_jfk_pca, scale = 0, choices = c(2,3))
+#biplot(weather_jfk_pca, scale = 0, choices = c(2,4))
+#biplot(weather_jfk_pca, scale = 0, choices = c(3,4))
+#biplot(weather_jfk_pca, scale = 0, choices = c(4,5))
+#biplot(weather_jfk_pca, scale = 0, choices = c(5,3))
+
+```
 
 
 
