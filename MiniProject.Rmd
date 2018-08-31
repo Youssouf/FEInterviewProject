@@ -9,14 +9,17 @@ output:
     number_sections: true
   pdf_document: 
     number_sections: true
+  word_document:
+    number_sections: true
     dev: png
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, dpi = 300)
+
 ```
 
-```{r  echo= FALSE, message=FALSE}
+```{r  echo= FALSE}
 ##########################
 library(tidyverse)
 library(lubridate)
@@ -59,8 +62,9 @@ For this project, we focus on the following datasets: `airlines`, `airports`, `f
 (We do this for both `temp` and `dewp` using `mutate_at`)
     + Construct a graph displaying the temperature at `JFK`.
     + Investigate if arrival delay is associated with the flight distance (and also departure delay).
+    + Investigate if departure delay is associated with weather conditions at the origin airport. This includes descriptives (mean departure delay), plotting, regression modelling, considering missing values etc.
     + Is the age of the plane associated to delay?
-    + ----
+    
     
 # Solutions 
 
